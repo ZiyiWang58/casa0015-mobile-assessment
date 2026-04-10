@@ -1,7 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'models/dog.dart';
+import 'models/walk_record.dart';
+import 'services/storage_service.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await StorageService.init();
   runApp(const PawTrackApp());
 }
 
@@ -22,40 +29,6 @@ class PawTrackApp extends StatelessWidget {
       ),
     );
   }
-}
-
-class Dog {
-  String id;
-  String name;
-  String breed;
-  double targetDistanceKm;
-  String photoUrl;
-
-  Dog({
-    required this.id,
-    required this.name,
-    required this.breed,
-    required this.targetDistanceKm,
-    required this.photoUrl,
-  });
-}
-
-class WalkRecord {
-  String dogId;
-  DateTime startTime;
-  DateTime endTime;
-  double distanceKm;
-  double calories;
-  bool goalReached;
-
-  WalkRecord({
-    required this.dogId,
-    required this.startTime,
-    required this.endTime,
-    required this.distanceKm,
-    required this.calories,
-    required this.goalReached,
-  });
 }
 
 class AppData extends InheritedWidget {
@@ -88,38 +61,54 @@ class AppStateContainer extends StatefulWidget {
 }
 
 class _AppDataState extends State<AppStateContainer> {
-  final List<Dog> dogs = [
-    Dog(
-      id: '1',
-      name: 'Milo',
-      breed: 'Corgi',
-      targetDistanceKm: 2.0,
-      photoUrl:
-      'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=800',
-    ),
-  ];
+  late List<Dog> dogs;
+  late List<WalkRecord> records;
 
-  final List<WalkRecord> records = [];
+  @override
+  void initState() {
+    super.initState();
 
-  void addDog(Dog dog) {
+    dogs = StorageService.loadDogs();
+    records = StorageService.loadWalkRecords();
+
+    if (dogs.isEmpty) {
+      dogs = [
+        Dog(
+          id: '1',
+          name: 'Milo',
+          breed: 'Corgi',
+          age: 3,
+          weightKg: 12.0,
+          targetDistanceKm: 2.0,
+          imagePath: null,
+        ),
+      ];
+      StorageService.saveDogs(dogs);
+    }
+  }
+
+  Future<void> addDog(Dog dog) async {
     setState(() {
       dogs.add(dog);
     });
+    await StorageService.saveDogs(dogs);
   }
 
-  void updateDog(Dog updatedDog) {
+  Future<void> updateDog(Dog updatedDog) async {
     setState(() {
       final index = dogs.indexWhere((dog) => dog.id == updatedDog.id);
       if (index != -1) {
         dogs[index] = updatedDog;
       }
     });
+    await StorageService.saveDogs(dogs);
   }
 
-  void addWalkRecord(WalkRecord record) {
+  Future<void> addWalkRecord(WalkRecord record) async {
     setState(() {
       records.add(record);
     });
+    await StorageService.saveWalkRecords(records);
   }
 
   List<WalkRecord> recordsForDog(String dogId) {
@@ -215,7 +204,10 @@ class DogListScreen extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundImage: NetworkImage(dog.photoUrl),
+                backgroundImage: dog.imagePath != null
+                    ? FileImage(File(dog.imagePath!))
+                    : null,
+                child: dog.imagePath == null ? const Icon(Icons.pets) : null,
               ),
               title: Text(dog.name),
               subtitle: Text(
@@ -262,18 +254,29 @@ class _AddDogScreenState extends State<AddDogScreen> {
   final nameController = TextEditingController();
   final breedController = TextEditingController();
   final targetController = TextEditingController();
-  final photoController = TextEditingController(
-    text:
-    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800',
-  );
+  final ageController = TextEditingController();
+  final weightController = TextEditingController();
+  File? selectedImage;
 
   @override
   void dispose() {
     nameController.dispose();
     breedController.dispose();
     targetController.dispose();
-    photoController.dispose();
     super.dispose();
+    ageController.dispose();
+    weightController.dispose();
+  }
+
+  Future<void> pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        selectedImage = File(pickedFile.path);
+      });
+    }
   }
 
   @override
@@ -302,6 +305,23 @@ class _AddDogScreenState extends State<AddDogScreen> {
                 },
               ),
               const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: pickImage,
+                icon: const Icon(Icons.photo),
+                label: const Text('Choose Dog Photo'),
+              ),
+              const SizedBox(height: 12),
+              if (selectedImage != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    selectedImage!,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              if (selectedImage != null) const SizedBox(height: 12),
               TextFormField(
                 controller: breedController,
                 decoration: const InputDecoration(
@@ -336,28 +356,45 @@ class _AddDogScreenState extends State<AddDogScreen> {
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller: photoController,
+                controller: ageController,
+                keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Photo URL',
+                  labelText: 'Age (optional)',
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: weightController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Weight in kg (optional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
               const SizedBox(height: 20),
               FilledButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_formKey.currentState!.validate()) {
                     final dog = Dog(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       name: nameController.text.trim(),
                       breed: breedController.text.trim(),
+                      age: ageController.text.trim().isEmpty
+                          ? null
+                          : int.tryParse(ageController.text.trim()),
+                      weightKg: weightController.text.trim().isEmpty
+                          ? null
+                          : double.tryParse(weightController.text.trim()),
                       targetDistanceKm: double.parse(targetController.text.trim()),
-                      photoUrl: photoController.text.trim().isEmpty
-                          ? 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800'
-                          : photoController.text.trim(),
+                      imagePath: selectedImage?.path,
                     );
 
-                    appState.addDog(dog);
-                    Navigator.pop(context);
+                    await appState.addDog(dog);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   }
                 },
                 child: const Text('Save Dog'),
@@ -386,12 +423,29 @@ class DogDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          ClipRRect(
+          dog.imagePath != null
+              ? ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Image.network(
-              dog.photoUrl,
+            child: Image.file(
+              File(dog.imagePath!),
               height: 220,
+              width: double.infinity,
               fit: BoxFit.cover,
+            ),
+          )
+              : Container(
+            height: 220,
+            decoration: BoxDecoration(
+              color: Colors.teal.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.teal.shade200),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.pets,
+                size: 80,
+                color: Colors.teal,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -585,13 +639,13 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       timer?.cancel();
 
                       final endTime = DateTime.now();
                       final goalReached = distanceKm >= dog.targetDistanceKm;
 
-                      appState.addWalkRecord(
+                      await appState.addWalkRecord(
                         WalkRecord(
                           dogId: dog.id,
                           startTime: startTime,
