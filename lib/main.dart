@@ -5,6 +5,8 @@ import 'models/walk_record.dart';
 import 'services/storage_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'services/location_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -515,29 +517,71 @@ class WalkTrackingScreen extends StatefulWidget {
 
 class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
   Timer? timer;
+  StreamSubscription<Position>? positionSubscription;
+
   int elapsedSeconds = 0;
   double distanceKm = 0.0;
   bool isPaused = false;
+  bool hasLocationPermission = false;
+  String statusMessage = 'Preparing walk...';
+
   late DateTime startTime;
+  Position? lastPosition;
 
   @override
   void initState() {
     super.initState();
     startTime = DateTime.now();
-    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!isPaused) {
-        setState(() {
-          elapsedSeconds++;
-          distanceKm += 0.01;
-        });
-      }
-    });
+    startWalkTracking();
   }
 
   @override
   void dispose() {
     timer?.cancel();
+    positionSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> startWalkTracking() async {
+    final permissionGranted =
+    await LocationService.checkAndRequestPermission();
+
+    if (!permissionGranted) {
+      setState(() {
+        hasLocationPermission = false;
+        statusMessage = 'Location permission denied or GPS is off.';
+      });
+      return;
+    }
+
+    setState(() {
+      hasLocationPermission = true;
+      statusMessage = 'Tracking your walk...';
+    });
+
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!isPaused) {
+        setState(() {
+          elapsedSeconds++;
+        });
+      }
+    });
+
+    positionSubscription = LocationService.getPositionStream().listen((position) {
+      if (isPaused) return;
+
+      if (lastPosition != null) {
+        final meters = LocationService.distanceBetween(lastPosition!, position);
+
+        if (meters > 0 && meters < 100) {
+          setState(() {
+            distanceKm += meters / 1000;
+          });
+        }
+      }
+
+      lastPosition = position;
+    });
   }
 
   String formatTime(int totalSeconds) {
@@ -555,7 +599,7 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
     final appState = AppData.of(context);
     final dog = appState.dogs.firstWhere((d) => d.id == widget.dogId);
 
-    final calories = distanceKm * 50.0;
+    final calories = distanceKm * (dog.weightKg ?? 10) * 0.8;
     final remaining = (dog.targetDistanceKm - distanceKm).clamp(0, 9999);
 
     return Scaffold(
@@ -572,16 +616,31 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.teal.shade200),
               ),
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.map, size: 64, color: Colors.teal),
-                    SizedBox(height: 8),
-                    Text(
-                      'Map will be added in the next version',
-                      style: TextStyle(fontSize: 16),
+                    Icon(
+                      hasLocationPermission ? Icons.location_on : Icons.location_off,
+                      size: 64,
+                      color: Colors.teal,
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      statusMessage,
+                      style: const TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    if (isPaused)
+                      const Text(
+                        'Walk paused',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
                   ],
                 ),
               ),
