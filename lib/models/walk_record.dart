@@ -1,3 +1,5 @@
+import 'route_point.dart';
+
 class WalkRecord {
   String dogId;
   DateTime startTime;
@@ -5,6 +7,7 @@ class WalkRecord {
   double distanceKm;
   double calories;
   bool goalReached;
+  List<RoutePoint> routePoints;
 
   WalkRecord({
     required this.dogId,
@@ -13,6 +16,7 @@ class WalkRecord {
     required this.distanceKm,
     required this.calories,
     required this.goalReached,
+    required this.routePoints,
   });
 
   Map<String, dynamic> toMap() {
@@ -23,10 +27,13 @@ class WalkRecord {
       'distanceKm': distanceKm,
       'calories': calories,
       'goalReached': goalReached,
+      'routePoints': routePoints.map((point) => point.toMap()).toList(),
     };
   }
 
   factory WalkRecord.fromMap(Map<dynamic, dynamic> map) {
+    final rawPoints = map['routePoints'] as List? ?? [];
+
     return WalkRecord(
       dogId: map['dogId'] ?? '',
       startTime: DateTime.parse(map['startTime']),
@@ -38,6 +45,9 @@ class WalkRecord {
           ? (map['calories'] as num).toDouble()
           : 0.0,
       goalReached: map['goalReached'] ?? false,
+      routePoints: rawPoints
+          .map((item) => RoutePoint.fromMap(Map<dynamic, dynamic>.from(item)))
+          .toList(),
     );
   }
 }

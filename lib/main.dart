@@ -7,6 +7,9 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'services/location_service.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'models/route_point.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -527,6 +530,7 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
 
   late DateTime startTime;
   Position? lastPosition;
+  List<RoutePoint> routePoints = [];
 
   @override
   void initState() {
@@ -570,14 +574,25 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
     positionSubscription = LocationService.getPositionStream().listen((position) {
       if (isPaused) return;
 
+      final newPoint = RoutePoint(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        timestamp: DateTime.now(),
+      );
+
       if (lastPosition != null) {
         final meters = LocationService.distanceBetween(lastPosition!, position);
 
         if (meters > 0 && meters < 100) {
           setState(() {
             distanceKm += meters / 1000;
+            routePoints.add(newPoint);
           });
         }
+      } else {
+        setState(() {
+          routePoints.add(newPoint);
+        });
       }
 
       lastPosition = position;
@@ -608,40 +623,89 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Container(
+            SizedBox(
               height: 220,
               width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.teal.shade50,
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.teal.shade200),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: routePoints.isNotEmpty
+                    ? FlutterMap(
+                  options: MapOptions(
+                    initialCenter: LatLng(
+                      routePoints.last.latitude,
+                      routePoints.last.longitude,
+                    ),
+                    initialZoom: 16,
+                  ),
                   children: [
-                    Icon(
-                      hasLocationPermission ? Icons.location_on : Icons.location_off,
-                      size: 64,
-                      color: Colors.teal,
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.pawtrack',
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      statusMessage,
-                      style: const TextStyle(fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    if (isPaused)
-                      const Text(
-                        'Walk paused',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange,
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: routePoints
+                              .map((point) => LatLng(point.latitude, point.longitude))
+                              .toList(),
+                          strokeWidth: 4,
                         ),
-                      ),
+                      ],
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(
+                            routePoints.last.latitude,
+                            routePoints.last.longitude,
+                          ),
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_on,
+                            size: 40,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
+                )
+                    : Container(
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade50,
+                    border: Border.all(color: Colors.teal.shade200),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          hasLocationPermission
+                              ? Icons.location_on
+                              : Icons.location_off,
+                          size: 64,
+                          color: Colors.teal,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          statusMessage,
+                          style: const TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        if (isPaused)
+                          const Text(
+                            'Walk paused',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -712,6 +776,7 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
                           distanceKm: distanceKm,
                           calories: calories,
                           goalReached: goalReached,
+                          routePoints: routePoints,
                         ),
                       );
 
