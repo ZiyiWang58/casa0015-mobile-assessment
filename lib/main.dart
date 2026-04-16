@@ -116,6 +116,24 @@ class _AppDataState extends State<AppStateContainer> {
     await StorageService.saveWalkRecords(records);
   }
 
+  Future<void> deleteDog(String dogId) async {
+    setState(() {
+      dogs.removeWhere((dog) => dog.id == dogId);
+      records.removeWhere((record) => record.dogId == dogId);
+    });
+
+    await StorageService.saveDogs(dogs);
+    await StorageService.saveWalkRecords(records);
+  }
+
+  Future<void> deleteWalkRecord(WalkRecord record) async {
+    setState(() {
+      records.remove(record);
+    });
+
+    await StorageService.saveWalkRecords(records);
+  }
+
   List<WalkRecord> recordsForDog(String dogId) {
     return records.where((r) => r.dogId == dogId).toList();
   }
@@ -220,7 +238,38 @@ class DogListScreen extends StatelessWidget {
                     '${walkedToday ? "Walked today ✅" : "Not walked today ❗"}',
               ),
               isThreeLine: true,
-              trailing: const Icon(Icons.chevron_right),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text('Delete dog'),
+                          content: Text('Delete ${dog.name} and all walk records?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmed == true) {
+                        await appState.deleteDog(dog.id);
+                      }
+                    },
+                  ),
+                  const Icon(Icons.chevron_right),
+                ],
+              ),
               onTap: () {
                 Navigator.push(
                   context,
@@ -422,6 +471,20 @@ class DogDetailScreen extends StatelessWidget {
     final appState = AppData.of(context);
     final dog = appState.dogs.firstWhere((d) => d.id == dogId);
     final dogRecords = appState.recordsForDog(dogId);
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+
+    final recentRecords = dogRecords.where((record) {
+      return record.endTime.isAfter(sevenDaysAgo);
+    }).toList();
+
+    final totalDistanceLast7Days = recentRecords.fold<double>(
+      0,
+          (sum, record) => sum + record.distanceKm,
+    );
+
+    final totalWalksLast7Days = recentRecords.length;
+
+    final goalsReachedLast7Days = recentRecords.where((r) => r.goalReached).length;
 
     return Scaffold(
       appBar: AppBar(title: Text(dog.name)),
@@ -475,6 +538,44 @@ class DogDetailScreen extends StatelessWidget {
               leading: const Icon(Icons.history),
               title: const Text('Walk records'),
               subtitle: Text('${dogRecords.length} total'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Last 7 Days',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Walks',
+                          value: '$totalWalksLast7Days',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Distance',
+                          value: '${totalDistanceLast7Days.toStringAsFixed(2)} km',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _SummaryTile(
+                    label: 'Goals reached',
+                    value: '$goalsReachedLast7Days',
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -836,6 +937,7 @@ class WalkSummaryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppData.of(context);
     final dog = appState.dogs.firstWhere((d) => d.id == dogId);
+    final difference = distanceKm - dog.targetDistanceKm;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Walk Summary')),
@@ -843,16 +945,52 @@ class WalkSummaryScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Icon(
-              goalReached ? Icons.celebration : Icons.pets,
-              size: 96,
-              color: goalReached ? Colors.green : Colors.orange,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '${dog.name} finished the walk!',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: goalReached ? Colors.green.shade50 : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: goalReached ? Colors.green.shade200 : Colors.orange.shade200,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    goalReached ? Icons.celebration : Icons.pets,
+                    size: 100,
+                    color: goalReached ? Colors.green : Colors.orange,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '${dog.name} finished the walk!',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    goalReached
+                        ? 'Great job! The walking goal was reached.'
+                        : 'Nice walk! The goal was not reached this time.',
+                    style: const TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    goalReached
+                        ? 'Exceeded goal by ${difference.toStringAsFixed(2)} km'
+                        : 'Short of goal by ${(-difference).toStringAsFixed(2)} km',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
             _SummaryTile(label: 'Duration', value: durationText()),
@@ -869,7 +1007,7 @@ class WalkSummaryScreen extends StatelessWidget {
               value: goalReached ? 'Yes ✅' : 'No ❌',
             ),
             const Spacer(),
-            FilledButton(
+            FilledButton.icon(
               onPressed: () {
                 Navigator.pushAndRemoveUntil(
                   context,
@@ -879,7 +1017,8 @@ class WalkSummaryScreen extends StatelessWidget {
                       (route) => false,
                 );
               },
-              child: const Text('Back to Home'),
+              icon: const Icon(Icons.home),
+              label: const Text('Back to Home'),
             ),
           ],
         ),
@@ -915,7 +1054,46 @@ class WalkHistoryScreen extends StatelessWidget {
             subtitle: Text(
               '${r.startTime.year}-${r.startTime.month.toString().padLeft(2, '0')}-${r.startTime.day.toString().padLeft(2, '0')}',
             ),
-            trailing: Text(r.goalReached ? 'Goal met' : 'Not met'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(r.goalReached ? 'Goal met' : 'Not met'),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Delete walk record'),
+                        content: const Text('Are you sure you want to delete this walk?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true) {
+                      await appState.deleteWalkRecord(r);
+                    }
+                  },
+                ),
+              ],
+            ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RouteReplayScreen(record: r),
+                ),
+              );
+            },
           );
         },
       ),
@@ -975,6 +1153,123 @@ class _SummaryTile extends StatelessWidget {
         trailing: Text(
           value,
           style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
+class RouteReplayScreen extends StatelessWidget {
+  final WalkRecord record;
+
+  const RouteReplayScreen({super.key, required this.record});
+
+  String durationText() {
+    final duration = record.endTime.difference(record.startTime);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes} min ${seconds} sec';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasRoute = record.routePoints.isNotEmpty;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Walk Route Replay')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 260,
+              width: double.infinity,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: hasRoute
+                    ? FlutterMap(
+                  options: MapOptions(
+                    initialCenter: LatLng(
+                      record.routePoints.last.latitude,
+                      record.routePoints.last.longitude,
+                    ),
+                    initialZoom: 16,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.pawtrack',
+                    ),
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: record.routePoints
+                              .map((point) =>
+                              LatLng(point.latitude, point.longitude))
+                              .toList(),
+                          strokeWidth: 4,
+                        ),
+                      ],
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(
+                            record.routePoints.first.latitude,
+                            record.routePoints.first.longitude,
+                          ),
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.flag,
+                            color: Colors.green,
+                            size: 36,
+                          ),
+                        ),
+                        Marker(
+                          point: LatLng(
+                            record.routePoints.last.latitude,
+                            record.routePoints.last.longitude,
+                          ),
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+                    : Container(
+                  color: Colors.teal.shade50,
+                  child: const Center(
+                    child: Text('No route data available'),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _SummaryTile(
+              label: 'Distance',
+              value: '${record.distanceKm.toStringAsFixed(2)} km',
+            ),
+            _SummaryTile(
+              label: 'Duration',
+              value: durationText(),
+            ),
+            _SummaryTile(
+              label: 'Calories',
+              value: record.calories.toStringAsFixed(0),
+            ),
+            _SummaryTile(
+              label: 'Goal reached',
+              value: record.goalReached ? 'Yes ✅' : 'No ❌',
+            ),
+          ],
         ),
       ),
     );
