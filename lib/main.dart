@@ -13,10 +13,16 @@ import 'models/route_point.dart';
 import 'services/weather_service.dart';
 import 'screens/calendar_screen.dart';
 import 'services/reminder_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'services/firebase_service.dart';
 
 Future<void> main() async {
   // Initialize Flutter bindings and app services before launching the app.
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await StorageService.init();
   await ReminderService.init();
   await ReminderService.requestPermission();
@@ -103,35 +109,59 @@ class _AppDataState extends State<AppStateContainer> {
     }
   }
 
-  // Add a new dog and save the updated list locally.
   Future<void> addDog(Dog dog) async {
+    // Add a new dog and always save locally first.
     setState(() {
       dogs.add(dog);
     });
+
     await StorageService.saveDogs(dogs);
+
+    // Try cloud sync, but do not block the app if Firebase is not ready yet.
+    try {
+      await FirebaseService.syncDogs(dogs);
+    } catch (e) {
+      print('Firebase dog sync failed: $e');
+    }
   }
 
-  // Update an existing dog's information and save changes locally.
   Future<void> updateDog(Dog updatedDog) async {
+    // Update an existing dog's information and save changes locally first.
     setState(() {
       final index = dogs.indexWhere((dog) => dog.id == updatedDog.id);
       if (index != -1) {
         dogs[index] = updatedDog;
       }
     });
+
     await StorageService.saveDogs(dogs);
+
+    // Try cloud sync, but do not block the app if Firebase is not ready yet.
+    try {
+      await FirebaseService.syncDogs(dogs);
+    } catch (e) {
+      print('Firebase dog update sync failed: $e');
+    }
   }
 
-  // Save a completed walk record and update local history.
   Future<void> addWalkRecord(WalkRecord record) async {
+    // Save a completed walk record locally first.
     setState(() {
       records.add(record);
     });
+
     await StorageService.saveWalkRecords(records);
+
+    // Try cloud sync, but do not block the app if Firebase is not ready yet.
+    try {
+      await FirebaseService.syncWalkRecords(records);
+    } catch (e) {
+      print('Firebase walk sync failed: $e');
+    }
   }
 
-  // Delete a dog and remove all walk records linked to that dog.
   Future<void> deleteDog(String dogId) async {
+    // Delete a dog and remove all related walk records locally first.
     setState(() {
       dogs.removeWhere((dog) => dog.id == dogId);
       records.removeWhere((record) => record.dogId == dogId);
@@ -139,15 +169,30 @@ class _AppDataState extends State<AppStateContainer> {
 
     await StorageService.saveDogs(dogs);
     await StorageService.saveWalkRecords(records);
+
+    // Try cloud sync, but do not block the app if Firebase is not ready yet.
+    try {
+      await FirebaseService.syncDogs(dogs);
+      await FirebaseService.syncWalkRecords(records);
+    } catch (e) {
+      print('Firebase dog delete sync failed: $e');
+    }
   }
 
-  // Delete one walk record from history and save the updated list.
   Future<void> deleteWalkRecord(WalkRecord record) async {
+    // Delete one walk record locally first.
     setState(() {
       records.remove(record);
     });
 
     await StorageService.saveWalkRecords(records);
+
+    // Try cloud sync, but do not block the app if Firebase is not ready yet.
+    try {
+      await FirebaseService.syncWalkRecords(records);
+    } catch (e) {
+      print('Firebase walk delete sync failed: $e');
+    }
   }
 
   // Return all walk records that belong to a specific dog.
@@ -245,7 +290,7 @@ class _DogListScreenState extends State<DogListScreen> {
     final now = DateTime.now();
 
     // Only show reminder in the evening.
-    if (now.hour < 0) return;
+    if (now.hour < 18) return;
 
     final unwalkedDogs = appState.dogs.where((dog) {
       return !appState.walkedToday(dog.id);
