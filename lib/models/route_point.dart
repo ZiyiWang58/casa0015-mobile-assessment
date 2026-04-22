@@ -1,3 +1,4 @@
+// Data model representing one GPS point in a walking route.
 class RoutePoint {
   double latitude;
   double longitude;
@@ -9,6 +10,7 @@ class RoutePoint {
     required this.timestamp,
   });
 
+  // Convert a route point into a map for local storage.
   Map<String, dynamic> toMap() {
     return {
       'latitude': latitude,
@@ -17,6 +19,7 @@ class RoutePoint {
     };
   }
 
+  // Rebuild a route point from locally stored map data.
   factory RoutePoint.fromMap(Map<dynamic, dynamic> map) {
     return RoutePoint(
       latitude: (map['latitude'] as num).toDouble(),

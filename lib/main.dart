@@ -10,13 +10,20 @@ import 'services/location_service.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'models/route_point.dart';
+import 'services/weather_service.dart';
+import 'screens/calendar_screen.dart';
+import 'services/reminder_service.dart';
 
 Future<void> main() async {
+  // Initialize Flutter bindings and app services before launching the app.
   WidgetsFlutterBinding.ensureInitialized();
   await StorageService.init();
+  await ReminderService.init();
+  await ReminderService.requestPermission();
   runApp(const PawTrackApp());
 }
 
+// Root widget of the app, setting up theme and shared app state.
 class PawTrackApp extends StatelessWidget {
   const PawTrackApp({super.key});
 
@@ -36,6 +43,7 @@ class PawTrackApp extends StatelessWidget {
   }
 }
 
+// Shared app state wrapper used to access dogs and walk records across screens.
 class AppData extends InheritedWidget {
   final _AppDataState state;
 
@@ -56,6 +64,7 @@ class AppData extends InheritedWidget {
   bool updateShouldNotify(AppData oldWidget) => true;
 }
 
+// Stateful container that stores and updates the app's shared data.
 class AppStateContainer extends StatefulWidget {
   final Widget child;
 
@@ -65,10 +74,12 @@ class AppStateContainer extends StatefulWidget {
   State<AppStateContainer> createState() => _AppDataState();
 }
 
+// Holds the main in-memory state for dogs and walking history, synced with local storage.
 class _AppDataState extends State<AppStateContainer> {
   late List<Dog> dogs;
   late List<WalkRecord> records;
 
+  // Load saved dogs and walk records when the app starts.
   @override
   void initState() {
     super.initState();
@@ -92,6 +103,7 @@ class _AppDataState extends State<AppStateContainer> {
     }
   }
 
+  // Add a new dog and save the updated list locally.
   Future<void> addDog(Dog dog) async {
     setState(() {
       dogs.add(dog);
@@ -99,6 +111,7 @@ class _AppDataState extends State<AppStateContainer> {
     await StorageService.saveDogs(dogs);
   }
 
+  // Update an existing dog's information and save changes locally.
   Future<void> updateDog(Dog updatedDog) async {
     setState(() {
       final index = dogs.indexWhere((dog) => dog.id == updatedDog.id);
@@ -109,6 +122,7 @@ class _AppDataState extends State<AppStateContainer> {
     await StorageService.saveDogs(dogs);
   }
 
+  // Save a completed walk record and update local history.
   Future<void> addWalkRecord(WalkRecord record) async {
     setState(() {
       records.add(record);
@@ -116,6 +130,7 @@ class _AppDataState extends State<AppStateContainer> {
     await StorageService.saveWalkRecords(records);
   }
 
+  // Delete a dog and remove all walk records linked to that dog.
   Future<void> deleteDog(String dogId) async {
     setState(() {
       dogs.removeWhere((dog) => dog.id == dogId);
@@ -126,6 +141,7 @@ class _AppDataState extends State<AppStateContainer> {
     await StorageService.saveWalkRecords(records);
   }
 
+  // Delete one walk record from history and save the updated list.
   Future<void> deleteWalkRecord(WalkRecord record) async {
     setState(() {
       records.remove(record);
@@ -134,10 +150,12 @@ class _AppDataState extends State<AppStateContainer> {
     await StorageService.saveWalkRecords(records);
   }
 
+  // Return all walk records that belong to a specific dog.
   List<WalkRecord> recordsForDog(String dogId) {
     return records.where((r) => r.dogId == dogId).toList();
   }
 
+  // Check whether a dog already has a walk recorded for today.
   bool walkedToday(String dogId) {
     final today = DateTime.now();
     return records.any((r) =>
@@ -153,6 +171,7 @@ class _AppDataState extends State<AppStateContainer> {
   }
 }
 
+// Intro splash screen shown briefly before entering the main dog list.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -164,6 +183,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // Automatically move from the splash screen to the home screen after a short delay.
     Timer(const Duration(seconds: 2), () {
       Navigator.pushReplacement(
         context,
@@ -200,8 +220,46 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-class DogListScreen extends StatelessWidget {
+/// Home screen showing all dog profiles and their daily walking status.
+class DogListScreen extends StatefulWidget {
   const DogListScreen({super.key});
+
+  @override
+  State<DogListScreen> createState() => _DogListScreenState();
+}
+
+class _DogListScreenState extends State<DogListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    checkWalkReminder();
+  }
+
+  /// Show a reminder if it is evening and some dogs have not been walked today.
+  Future<void> checkWalkReminder() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (!mounted) return;
+
+    final appState = AppData.of(context);
+    final now = DateTime.now();
+
+    // Only show reminder in the evening.
+    if (now.hour < 0) return;
+
+    final unwalkedDogs = appState.dogs.where((dog) {
+      return !appState.walkedToday(dog.id);
+    }).toList();
+
+    if (unwalkedDogs.isNotEmpty) {
+      final names = unwalkedDogs.map((d) => d.name).join(', ');
+
+      await ReminderService.showWalkReminder(
+        title: 'Dog walk reminder',
+        body: 'You have not walked $names today. Time for a walk?',
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +269,19 @@ class DogListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Dogs'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CalendarScreen(records: appState.records),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: dogs.isEmpty
           ? const Center(
@@ -230,7 +301,9 @@ class DogListScreen extends StatelessWidget {
                 backgroundImage: dog.imagePath != null
                     ? FileImage(File(dog.imagePath!))
                     : null,
-                child: dog.imagePath == null ? const Icon(Icons.pets) : null,
+                child: dog.imagePath == null
+                    ? const Icon(Icons.pets)
+                    : null,
               ),
               title: Text(dog.name),
               subtitle: Text(
@@ -244,18 +317,23 @@ class DogListScreen extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
                     onPressed: () async {
+                      // Ask the user to confirm before permanently deleting data.
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (_) => AlertDialog(
                           title: const Text('Delete dog'),
-                          content: Text('Delete ${dog.name} and all walk records?'),
+                          content: Text(
+                            'Delete ${dog.name} and all walk records?',
+                          ),
                           actions: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context, false),
+                              onPressed: () =>
+                                  Navigator.pop(context, false),
                               child: const Text('Cancel'),
                             ),
                             FilledButton(
-                              onPressed: () => Navigator.pop(context, true),
+                              onPressed: () =>
+                                  Navigator.pop(context, true),
                               child: const Text('Delete'),
                             ),
                           ],
@@ -295,6 +373,7 @@ class DogListScreen extends StatelessWidget {
   }
 }
 
+// Form screen used to create a new dog profile.
 class AddDogScreen extends StatefulWidget {
   const AddDogScreen({super.key});
 
@@ -322,6 +401,7 @@ class _AddDogScreenState extends State<AddDogScreen> {
     weightController.dispose();
   }
 
+  // Open the device gallery and let the user choose a photo for the dog.
   Future<void> pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -429,6 +509,7 @@ class _AddDogScreenState extends State<AddDogScreen> {
               const SizedBox(height: 12),
               const SizedBox(height: 20),
               FilledButton(
+                // Validate the form, create a dog object, and save it to local storage.
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
                     final dog = Dog(
@@ -461,16 +542,67 @@ class _AddDogScreenState extends State<AddDogScreen> {
   }
 }
 
-class DogDetailScreen extends StatelessWidget {
+// Detail screen for one dog, showing profile info, weather advice, stats, and actions.
+class DogDetailScreen extends StatefulWidget {
   final String dogId;
 
   const DogDetailScreen({super.key, required this.dogId});
 
   @override
+  State<DogDetailScreen> createState() => _DogDetailScreenState();
+}
+
+class _DogDetailScreenState extends State<DogDetailScreen> {
+  WeatherInfo? weatherInfo;
+  bool isLoadingWeather = true;
+  String? weatherError;
+
+  @override
+  void initState() {
+    super.initState();
+    loadWeather();
+  }
+
+  // Fetch current weather based on the user's location and generate a walking suggestion.
+  Future<void> loadWeather() async {
+    try {
+      final permissionGranted =
+      await LocationService.checkAndRequestPermission();
+
+      if (!permissionGranted) {
+        setState(() {
+          isLoadingWeather = false;
+          weatherError = 'Location permission denied or GPS is off.';
+        });
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+
+      final info = await WeatherService.fetchWeather(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+
+      setState(() {
+        weatherInfo = info;
+        isLoadingWeather = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoadingWeather = false;
+        weatherError = 'Could not load weather information.';
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final appState = AppData.of(context);
-    final dog = appState.dogs.firstWhere((d) => d.id == dogId);
-    final dogRecords = appState.recordsForDog(dogId);
+    final dog = appState.dogs.firstWhere((d) => d.id == widget.dogId);
+    final dogRecords = appState.recordsForDog(widget.dogId);
+
+    // Calculate simple walking statistics for the last 7 days.
     final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
 
     final recentRecords = dogRecords.where((record) {
@@ -483,7 +615,6 @@ class DogDetailScreen extends StatelessWidget {
     );
 
     final totalWalksLast7Days = recentRecords.length;
-
     final goalsReachedLast7Days = recentRecords.where((r) => r.goalReached).length;
 
     return Scaffold(
@@ -526,6 +657,58 @@ class DogDetailScreen extends StatelessWidget {
             style: const TextStyle(fontSize: 18, color: Colors.grey),
           ),
           const SizedBox(height: 12),
+
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: isLoadingWeather
+                  ? const Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 12),
+                  Text('Loading weather...'),
+                ],
+              )
+                  : weatherError != null
+                  ? Text(
+                weatherError!,
+                style: const TextStyle(color: Colors.red),
+              )
+                  : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Weather Advice',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Condition: ${weatherInfo!.description}'),
+                  Text(
+                    'Temperature: ${weatherInfo!.temperature.toStringAsFixed(1)}°C',
+                  ),
+                  Text(
+                    'Rain chance: ${weatherInfo!.precipitationProbability}%',
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    weatherInfo!.advice,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           Card(
             child: ListTile(
               leading: const Icon(Icons.flag),
@@ -540,6 +723,7 @@ class DogDetailScreen extends StatelessWidget {
               subtitle: Text('${dogRecords.length} total'),
             ),
           ),
+
           const SizedBox(height: 8),
           Card(
             child: Padding(
@@ -578,6 +762,7 @@ class DogDetailScreen extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: () {
@@ -610,6 +795,7 @@ class DogDetailScreen extends StatelessWidget {
   }
 }
 
+// Live walking screen that tracks time, GPS distance, route points, and progress toward the goal.
 class WalkTrackingScreen extends StatefulWidget {
   final String dogId;
 
@@ -647,6 +833,7 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
     super.dispose();
   }
 
+  // Start live walk tracking by requesting location access and listening for position updates.
   Future<void> startWalkTracking() async {
     final permissionGranted =
     await LocationService.checkAndRequestPermission();
@@ -672,6 +859,7 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
       }
     });
 
+    // Listen to live GPS updates and build the route while accumulating walking distance.
     positionSubscription = LocationService.getPositionStream().listen((position) {
       if (isPaused) return;
 
@@ -863,6 +1051,7 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton.icon(
+                    // Finish the walk, save the final record, and open the summary screen.
                     onPressed: () async {
                       timer?.cancel();
 
@@ -908,6 +1097,7 @@ class _WalkTrackingScreenState extends State<WalkTrackingScreen> {
   }
 }
 
+// Summary screen showing the result of one completed walk.
 class WalkSummaryScreen extends StatelessWidget {
   final String dogId;
   final DateTime startTime;
@@ -1027,6 +1217,7 @@ class WalkSummaryScreen extends StatelessWidget {
   }
 }
 
+// History screen listing all saved walks for one dog.
 class WalkHistoryScreen extends StatelessWidget {
   final String dogId;
 
@@ -1086,6 +1277,7 @@ class WalkHistoryScreen extends StatelessWidget {
                 ),
               ],
             ),
+            // Open the saved route replay screen for this walk record.
             onTap: () {
               Navigator.push(
                 context,
@@ -1159,6 +1351,7 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
+// Replay screen showing the saved route of a previous walk on the map.
 class RouteReplayScreen extends StatelessWidget {
   final WalkRecord record;
 

@@ -1,3 +1,4 @@
+// Data model representing one dog profile in the app.
 class Dog {
   String id;
   String name;
@@ -17,6 +18,7 @@ class Dog {
     this.imagePath,
   });
 
+  // Convert a Dog object into a map so it can be saved locally.
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -29,6 +31,7 @@ class Dog {
     };
   }
 
+  // Rebuild a Dog object from locally stored map data.
   factory Dog.fromMap(Map<dynamic, dynamic> map) {
     return Dog(
       id: map['id'] ?? '',

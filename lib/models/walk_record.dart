@@ -1,5 +1,6 @@
 import 'route_point.dart';
 
+// Data model representing one completed dog walk.
 class WalkRecord {
   String dogId;
   DateTime startTime;
@@ -19,6 +20,7 @@ class WalkRecord {
     required this.routePoints,
   });
 
+  // Convert a WalkRecord into a map so it can be stored locally.
   Map<String, dynamic> toMap() {
     return {
       'dogId': dogId,
@@ -31,6 +33,7 @@ class WalkRecord {
     };
   }
 
+  // Rebuild a WalkRecord from saved local data.
   factory WalkRecord.fromMap(Map<dynamic, dynamic> map) {
     final rawPoints = map['routePoints'] as List? ?? [];
 
