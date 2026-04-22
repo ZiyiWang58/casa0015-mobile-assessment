@@ -7,6 +7,7 @@ class Dog {
   double? weightKg;
   double targetDistanceKm;
   String? imagePath;
+  String? imageUrl;
 
   Dog({
     required this.id,
@@ -16,6 +17,7 @@ class Dog {
     this.weightKg,
     required this.targetDistanceKm,
     this.imagePath,
+    this.imageUrl,
   });
 
   // Convert a Dog object into a map so it can be saved locally.
@@ -28,6 +30,7 @@ class Dog {
       'weightKg': weightKg,
       'targetDistanceKm': targetDistanceKm,
       'imagePath': imagePath,
+      'imageUrl': imageUrl,
     };
   }
 
@@ -45,6 +48,7 @@ class Dog {
           ? (map['targetDistanceKm'] as num).toDouble()
           : 0.0,
       imagePath: map['imagePath'],
+      imageUrl: map['imageUrl'],
     );
   }
 }

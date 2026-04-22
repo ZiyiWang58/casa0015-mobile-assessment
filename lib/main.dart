@@ -16,6 +16,8 @@ import 'services/reminder_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'services/firebase_service.dart';
+import 'services/auth_service.dart';
+import 'screens/auth_gate.dart';
 
 Future<void> main() async {
   // Initialize Flutter bindings and app services before launching the app.
@@ -43,7 +45,7 @@ class PawTrackApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
           useMaterial3: true,
         ),
-        home: const SplashScreen(),
+        home: const AuthGate(),
       ),
     );
   }
@@ -200,6 +202,35 @@ class _AppDataState extends State<AppStateContainer> {
     return records.where((r) => r.dogId == dogId).toList();
   }
 
+  // Replace the current in-memory and local data with the signed-in user's cloud data.
+  Future<void> loadCurrentUserDataFromCloud() async {
+    try {
+      final cloudDogs = await FirebaseService.loadDogs();
+      final cloudRecords = await FirebaseService.loadWalkRecords();
+
+      setState(() {
+        dogs = cloudDogs;
+        records = cloudRecords;
+      });
+
+      await StorageService.saveDogs(dogs);
+      await StorageService.saveWalkRecords(records);
+    } catch (e) {
+      print('Failed to load cloud data for current user: $e');
+    }
+  }
+
+  // Clear current in-memory and local data when the user signs out.
+  Future<void> clearCurrentUserData() async {
+    setState(() {
+      dogs = [];
+      records = [];
+    });
+
+    await StorageService.saveDogs(dogs);
+    await StorageService.saveWalkRecords(records);
+  }
+
   // Check whether a dog already has a walk recorded for today.
   bool walkedToday(String dogId) {
     final today = DateTime.now();
@@ -233,7 +264,7 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => const DogListScreen(),
+          builder: (_) => const AuthGate(),
         ),
       );
     });
@@ -277,7 +308,18 @@ class _DogListScreenState extends State<DogListScreen> {
   @override
   void initState() {
     super.initState();
+    loadUserData();
     checkWalkReminder();
+  }
+
+  /// Load the signed-in user's cloud data after entering the app.
+  Future<void> loadUserData() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (!mounted) return;
+
+    final appState = AppData.of(context);
+    await appState.loadCurrentUserDataFromCloud();
   }
 
   /// Show a reminder if it is evening and some dogs have not been walked today.
@@ -310,11 +352,22 @@ class _DogListScreenState extends State<DogListScreen> {
   Widget build(BuildContext context) {
     final appState = AppData.of(context);
     final dogs = appState.dogs;
+    final currentUser = AuthService.getCurrentUser();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Dogs'),
         actions: [
+          if (currentUser != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Center(
+                child: Text(
+                  'User: ${currentUser.uid.substring(0, 6)}...',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.calendar_month),
             onPressed: () {
@@ -324,6 +377,25 @@ class _DogListScreenState extends State<DogListScreen> {
                   builder: (_) => CalendarScreen(records: appState.records),
                 ),
               );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              // Clear the current user's local data, sign out, and return to the auth gate.
+              final appState = AppData.of(context);
+              await appState.clearCurrentUserData();
+              await AuthService.signOut();
+
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AuthGate(),
+                  ),
+                      (route) => false,
+                );
+              }
             },
           ),
         ],
@@ -346,9 +418,7 @@ class _DogListScreenState extends State<DogListScreen> {
                 backgroundImage: dog.imagePath != null
                     ? FileImage(File(dog.imagePath!))
                     : null,
-                child: dog.imagePath == null
-                    ? const Icon(Icons.pets)
-                    : null,
+                child: dog.imagePath == null ? const Icon(Icons.pets) : null,
               ),
               title: Text(dog.name),
               subtitle: Text(
@@ -554,8 +624,8 @@ class _AddDogScreenState extends State<AddDogScreen> {
               const SizedBox(height: 12),
               const SizedBox(height: 20),
               FilledButton(
-                // Validate the form, create a dog object, and save it to local storage.
                 onPressed: () async {
+                  // Validate the form and save the dog profile using the local image path only.
                   if (_formKey.currentState!.validate()) {
                     final dog = Dog(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -569,6 +639,7 @@ class _AddDogScreenState extends State<AddDogScreen> {
                           : double.tryParse(weightController.text.trim()),
                       targetDistanceKm: double.parse(targetController.text.trim()),
                       imagePath: selectedImage?.path,
+                      imageUrl: null,
                     );
 
                     await appState.addDog(dog);
@@ -1247,7 +1318,7 @@ class WalkSummaryScreen extends StatelessWidget {
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const DogListScreen(),
+                    builder: (_) => const AuthGate(),
                   ),
                       (route) => false,
                 );
