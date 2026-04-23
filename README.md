@@ -1,23 +1,161 @@
-# REPLACE WITH YOUR APP NAME
+# PawTrack 🐾
 
-This is the Final assessment template for CASA0014 - Please use this template and edit the relevant sections to personalise.
-This section has a short introduction to what the application is
+PawTrack is a Flutter mobile app for busy dog owners who want a simple way to **remember walks, track exercise, and manage each dog's daily routine**.
 
-## Use this README File 
+It combines **real-time GPS tracking**, **weather advice**, **calendar reminders**, and **Firebase cloud accounts** so users can plan walks, review history, and keep each account's dog data safely separated.
 
-Use this section to show us what your Mobile App is about.   Include a Screenshot to the App, link to the various frameworks you've used. Include your presentation video here that shows off your Mobile App.   Emojis are also fun to include 📱 😄
+---
 
-Look at some other Flutter Apps online and see how they use there README File.  Good examples are:
+## Why PawTrack?
 
-- https://github.com/miickel/flutter_particle_clock
-- https://github.com/Tarikul711/flutter-food-delivery-app-ui    
-- https://github.com/mohak1283/Instagram-Clone
+- keep all dogs in one place
+- set a walk goal for each dog
+- track real walks with GPS
+- review history and 7-day stats
+- get weather-based walking suggestions
+- use account-based cloud sync so each user sees their own data
 
+---
 
-## Include A Section That Tells Developers How To Install The App
+## Demo
 
-Include a section that gives intructions on how to install the app or run it in Flutter.  What versions of the plugins are you assuming?  Maybe define a licence
+**App Demo Video:** [Watch here](later)
 
-##  Contact Details
+---
 
-Having Contact Details is also good as it shows people how to get in contact with you if they'd like to contribute to the app. 
+## Storyboard
+
+The storyboard below shows the full PawTrack journey, from forgetting a walk to planning, tracking, reviewing, and securely managing personal dog data.
+
+![PawTrack Storyboard](media/storyboard.png)
+
+---
+
+## Screenshots
+
+### Splash & Authentication
+
+<p align="center">
+  <img src="media/splash_screen.jpg" width="22%" />
+  <img src="media/login.jpg" width="22%" />
+  <img src="media/create_account_1.jpg" width="22%" />
+</p>
+
+### Home & Dog Management
+
+<p align="center">
+  <img src="media/home_page_1.jpg" width="22%" />
+  <img src="media/add_dog_1.jpg" width="22%" />
+  <img src="media/add_dog_2.jpg" width="22%" />
+  <img src="media/home_page_2.jpg" width="22%" />
+</p>
+
+<p align="center">
+  <img src="media/home_page_3.jpg" width="22%" />
+  <img src="media/dog_page_1.jpg" width="22%" />
+  <img src="media/dog_page_2.jpg" width="22%" />
+</p>
+
+### Walking Experience
+
+<p align="center">
+  <img src="media/walking_page_1.jpg" width="22%" />
+  <img src="media/walking_page_2.jpg" width="22%" />
+  <img src="media/walk_finish_1.jpg" width="22%" />
+  <img src="media/walk_finish_2.jpg" width="22%" />
+</p>
+
+<p align="center">
+  <img src="media/walk_history.jpg" width="22%" />
+  <img src="media/calendar_2.jpg" width="22%" />
+</p>
+
+### Reminders
+
+<p align="center">
+  <img src="media/reminder_1.jpg" width="30%" />
+  <img src="media/reminder_2.jpg" width="30%" />
+</p>
+
+---
+
+## Features
+
+- Dog Profiles
+- Real Walk Tracking
+- Map & Route Replay
+- Weather Advice
+- Calendar & History
+- Reminder Support
+- Firebase Cloud Features
+
+---
+
+## Tech Stack
+
+### Built With
+- Flutter
+- Dart
+- Android Studio
+
+### Packages / Libraries
+- `geolocator` — GPS location tracking
+- `flutter_map` + `latlong2` — live map and route display
+- `hive` + `hive_flutter` — local storage
+- `image_picker` — dog photo selection
+- `table_calendar` — calendar view
+- `flutter_local_notifications` — reminder notifications
+- `http` — weather API requests
+- `firebase_core` — Firebase setup
+- `cloud_firestore` — cloud database
+- `firebase_auth` — login / registration
+
+---
+
+## Get Started
+
+### Prerequisites
+
+Make sure you have:
+
+- Flutter SDK installed
+- Dart installed
+- Android Studio or VS Code
+- an Android device or emulator
+- a Firebase project configured for the app
+
+### Installation
+
+```bash
+git clone <later>
+cd casa0015-mobile-assessment
+flutter pub get
+flutter run
+```
+
+### Firebase Setup
+
+PawTrack uses Firebase Authentication and Cloud Firestore.
+
+To run the app correctly, configure your own Firebase project and generate the required FlutterFire files.
+
+Typical setup steps:
+
+- Create a Firebase project
+- Enable Email/Password Authentication
+- Enable Cloud Firestore
+- Run FlutterFire configuration
+- Make sure `firebase_options.dart` is included in the project
+- Android Notes
+
+If you run PawTrack on Android, make sure:
+
+- location permissions are enabled
+- notification permissions are enabled
+- Google Play services are available on the device
+
+---
+
+## Contact Details
+
+- Email: zczq912@ucl.ac.uk
