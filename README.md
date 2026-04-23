@@ -127,7 +127,7 @@ Make sure you have:
 ### Installation
 
 ```bash
-git clone <later>
+git clone https://github.com/ZiyiWang58/casa0015-mobile-assessment.git
 cd casa0015-mobile-assessment
 flutter pub get
 flutter run
