@@ -23,7 +23,7 @@ It combines **real-time GPS tracking**, **weather advice**, **calendar reminders
 
 ## Demo
 
-**App Demo Video:** [Watch here](media/CASA0015.mp4)
+**App Demo Video:** [Watch here](https://youtube.com/shorts/3p3pVw27iak?feature=share)
 
 ---
 
