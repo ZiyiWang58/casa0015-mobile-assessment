@@ -4,6 +4,10 @@ PawTrack is a Flutter mobile app for busy dog owners who want a simple way to **
 
 It combines **real-time GPS tracking**, **weather advice**, **calendar reminders**, and **Firebase cloud accounts** so users can plan walks, review history, and keep each account's dog data safely separated.
 
+<p align="center">
+  <img src="media/EB4C9BD3D87815C77F452DBD9EC32541.gif" width="30%" />
+</p>
+
 ---
 
 ## Why PawTrack?
