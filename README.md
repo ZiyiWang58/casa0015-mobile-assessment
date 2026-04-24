@@ -141,6 +141,8 @@ flutter pub get
 flutter run
 ```
 
+**Release APK:** [Download here](https://github.com/ZiyiWang58/casa0015-mobile-assessment/releases/tag/v1.0)
+
 ### Firebase Setup
 
 PawTrack uses Firebase Authentication and Cloud Firestore.
