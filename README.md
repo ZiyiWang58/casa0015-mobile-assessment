@@ -21,9 +21,11 @@ It combines **real-time GPS tracking**, **weather advice**, **calendar reminders
 
 ---
 
-## Demo
+## Resources
 
 **App Demo Video:** [Watch here](https://youtube.com/shorts/3p3pVw27iak?feature=share)
+
+**Landing Page:** [Visit the project website](https://ziyiwang58.github.io/casa0015-mobile-assessment/)
 
 ---
 
