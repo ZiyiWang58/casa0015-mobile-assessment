@@ -112,6 +112,14 @@ The storyboard below shows the full PawTrack journey, from forgetting a walk to 
 
 ---
 
+## API & Service Integration
+
+- **Open-Meteo API** — used to fetch live weather data and generate walking advice based on current conditions.
+- **Firebase Authentication** — used for user registration, login, logout, and account-based access.
+- **Cloud Firestore** — used to store dog profiles and walk records in the cloud with per-user data separation.
+
+---
+
 ## Get Started
 
 ### Prerequisites
