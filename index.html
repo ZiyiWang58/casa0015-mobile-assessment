@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PawTrack</title>
+    <style>
+        :root {
+          --bg: #f7f4ee;
+          --card: #ffffff;
+          --text: #1f2937;
+          --muted: #6b7280;
+          --primary: #0f3d66;
+          --accent: #d97706;
+          --line: #e5e7eb;
+          --shadow: 0 12px 32px rgba(15, 61, 102, 0.08);
+          --radius: 22px;
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+          margin: 0;
+          font-family: Arial, Helvetica, sans-serif;
+          color: var(--text);
+          background: linear-gradient(180deg, #faf7f1 0%, #f5f7fb 100%);
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .container {
+          width: min(1120px, calc(100% - 32px));
+          margin: 0 auto;
+        }
+
+        .nav {
+          position: sticky;
+          top: 0;
+          z-index: 20;
+          background: rgba(247, 244, 238, 0.88);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(229, 231, 235, 0.8);
+        }
+
+        .nav-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 0;
+          gap: 16px;
+        }
+
+        .brand {
+          font-size: 1.4rem;
+          font-weight: 800;
+          color: var(--primary);
+          letter-spacing: 0.2px;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 18px;
+          flex-wrap: wrap;
+          color: var(--muted);
+          font-size: 0.95rem;
+        }
+
+        .hero {
+          padding: 72px 0 40px;
+        }
+
+        .hero-grid {
+          display: grid;
+          grid-template-columns: 1.1fr 0.9fr;
+          gap: 28px;
+          align-items: center;
+        }
+
+        .hero-card,
+        .panel,
+        .feature,
+        .screenshot,
+        .cta-box {
+          background: var(--card);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+        }
+
+        .hero-copy {
+          padding: 34px;
+        }
+
+        .eyebrow {
+          display: inline-block;
+          background: #fff3e6;
+          color: #9a5a00;
+          border: 1px solid #fed7aa;
+          padding: 8px 12px;
+          border-radius: 999px;
+          font-size: 0.86rem;
+          font-weight: 700;
+          margin-bottom: 16px;
+        }
+
+        h1 {
+          font-size: clamp(2.2rem, 5vw, 4rem);
+          line-height: 1.05;
+          margin: 0 0 14px;
+          color: var(--primary);
+        }
+
+        .lead {
+          font-size: 1.08rem;
+          line-height: 1.7;
+          color: var(--muted);
+          margin: 0 0 22px;
+          max-width: 58ch;
+        }
+
+        .actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-bottom: 22px;
+        }
+
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 14px 18px;
+          border-radius: 14px;
+          font-weight: 700;
+          transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary {
+          background: var(--primary);
+          color: white;
+        }
+
+        .btn-secondary {
+          background: white;
+          color: var(--primary);
+          border: 1px solid var(--line);
+        }
+
+        .stats {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+
+        .stat {
+          background: #f8fafc;
+          border: 1px solid var(--line);
+          border-radius: 18px;
+          padding: 16px;
+        }
+
+        .stat strong {
+          display: block;
+          color: var(--primary);
+          font-size: 1.25rem;
+          margin-bottom: 6px;
+        }
+
+        .stat span {
+          color: var(--muted);
+          font-size: 0.92rem;
+          line-height: 1.4;
+        }
+
+        .hero-visual {
+          padding: 18px;
+        }
+
+        .hero-visual img,
+        .panel img,
+        .screenshot img {
+          width: 100%;
+          display: block;
+          border-radius: 18px;
+        }
+
+        section {
+          padding: 26px 0;
+        }
+
+        .section-title {
+          font-size: 2rem;
+          margin: 0 0 10px;
+          color: var(--primary);
+        }
+
+        .section-text {
+          color: var(--muted);
+          line-height: 1.7;
+          margin: 0 0 22px;
+          max-width: 70ch;
+        }
+
+        .features-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 18px;
+        }
+
+        .feature {
+          padding: 22px;
+        }
+
+        .feature h3 {
+          margin: 0 0 10px;
+          font-size: 1.08rem;
+          color: var(--primary);
+        }
+
+        .feature p {
+          margin: 0;
+          color: var(--muted);
+          line-height: 1.65;
+          font-size: 0.96rem;
+        }
+
+        .storyboard-wrap {
+          padding: 18px;
+        }
+
+        .screens-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+        }
+
+        .screenshot {
+          overflow: hidden;
+        }
+
+        .screenshot img {
+          aspect-ratio: 9 / 16;
+          object-fit: cover;
+          border-radius: 0;
+        }
+
+        .caption {
+          padding: 12px 14px;
+          border-top: 1px solid var(--line);
+          color: var(--muted);
+          font-size: 0.92rem;
+          line-height: 1.45;
+          background: white;
+        }
+
+        .api-list {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+        }
+
+        .panel {
+          padding: 20px;
+        }
+
+        .panel h3 {
+          margin: 0 0 8px;
+          color: var(--primary);
+          font-size: 1.05rem;
+        }
+
+        .panel p {
+          margin: 0;
+          color: var(--muted);
+          line-height: 1.65;
+          font-size: 0.96rem;
+        }
+
+        .steps {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+
+        .step-list {
+          background: white;
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          padding: 24px;
+        }
+
+        .step-list h3 {
+          margin-top: 0;
+          color: var(--primary);
+        }
+
+        .step-list ol,
+        .step-list ul {
+          margin: 0;
+          padding-left: 20px;
+          color: var(--muted);
+          line-height: 1.8;
+        }
+
+        .cta-box {
+          padding: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          margin-top: 12px;
+        }
+
+        .cta-box h3 {
+          margin: 0 0 8px;
+          color: var(--primary);
+          font-size: 1.4rem;
+        }
+
+        .cta-box p {
+          margin: 0;
+          color: var(--muted);
+          line-height: 1.7;
+          max-width: 55ch;
+        }
+
+        footer {
+          padding: 30px 0 50px;
+          color: var(--muted);
+          text-align: center;
+          font-size: 0.94rem;
+        }
+
+        @media (max-width: 960px) {
+          .hero-grid,
+          .features-grid,
+          .api-list,
+          .steps,
+          .screens-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .cta-box {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .hero-grid,
+          .features-grid,
+          .api-list,
+          .steps,
+          .screens-grid,
+          .stats {
+            grid-template-columns: 1fr;
+          }
+
+          .hero {
+            padding-top: 42px;
+          }
+
+          .hero-copy,
+          .hero-visual,
+          .panel,
+          .feature,
+          .step-list,
+          .cta-box {
+            padding: 20px;
+          }
+
+          .nav-inner {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+        }
+    </style>
+</head>
+<body>
+<nav class="nav">
+    <div class="container nav-inner">
+        <div class="brand">PawTrack 🐾</div>
+        <div class="nav-links">
+            <a href="#overview">Overview</a>
+            <a href="#features">Features</a>
+            <a href="#storyboard">Storyboard</a>
+            <a href="#screens">Screenshots</a>
+            <a href="#api">API</a>
+            <a href="#get-started">Get Started</a>
+        </div>
+    </div>
+</nav>
+
+<header class="hero">
+    <div class="container hero-grid">
+        <div class="hero-card hero-copy">
+            <div class="eyebrow">Coursework Project · CASA0015</div>
+            <h1>Never wonder if today’s dog walk happened.</h1>
+            <p class="lead">
+                PawTrack helps busy dog owners manage dog profiles, plan walks with weather advice, track routes with GPS,
+                and review history with reminders, calendar records, and user-specific cloud data.
+            </p>
+            <div class="actions">
+                <a class="btn btn-primary" href="https://github.com/ZiyiWang58/casa0015-mobile-assessment" target="_blank" rel="noreferrer">View on GitHub</a>
+                <a class="btn btn-secondary" href="https://github.com/ZiyiWang58/casa0015-mobile-assessment/releases/tag/v1.0" target="_blank" rel="noreferrer">Download APK</a>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <strong>GPS</strong>
+                    <span>Real-time route, distance, time, and calories during each walk.</span>
+                </div>
+                <div class="stat">
+                    <strong>Weather</strong>
+                    <span>Live weather advice helps decide if today is a good day to walk.</span>
+                </div>
+                <div class="stat">
+                    <strong>Cloud</strong>
+                    <span>Login, per-user data separation, and synced dog records with Firebase.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-card hero-visual">
+            <img src="media/storyboard.png" alt="PawTrack storyboard preview" />
+        </div>
+    </div>
+</header>
+
+<section id="overview">
+    <div class="container">
+        <h2 class="section-title">Overview</h2>
+        <p class="section-text">
+            PawTrack is a mobile app designed for dog owners who may forget daily walks or want a clearer view of their pet’s routine.
+            The app combines dog management, walking goals, weather support, route tracking, summaries, history, reminders,
+            and account-based cloud storage in one simple flow.
+        </p>
+    </div>
+</section>
+
+<section id="features">
+    <div class="container">
+        <h2 class="section-title">Core Features</h2>
+        <div class="features-grid">
+            <div class="feature">
+                <h3>Dog Profiles</h3>
+                <p>Create multiple dog cards, save key details, and set a walking goal for each dog.</p>
+            </div>
+            <div class="feature">
+                <h3>Live Walk Tracking</h3>
+                <p>Track a walk in real time with GPS, route display, distance, duration, and calorie estimates.</p>
+            </div>
+            <div class="feature">
+                <h3>Walk Summary</h3>
+                <p>Finish a walk and instantly review results, including progress toward the goal.</p>
+            </div>
+            <div class="feature">
+                <h3>History & 7-Day Stats</h3>
+                <p>Review previous walks, compare recent activity, and understand routine over time.</p>
+            </div>
+            <div class="feature">
+                <h3>Calendar & Reminders</h3>
+                <p>Check whether a dog was walked on a given day and use reminders to stay consistent.</p>
+            </div>
+            <div class="feature">
+                <h3>Per-User Cloud Data</h3>
+                <p>Each account keeps its own dogs and walk records separated through Firebase login and Firestore.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="storyboard">
+    <div class="container">
+        <h2 class="section-title">Storyboard</h2>
+        <p class="section-text">
+            This storyboard shows the main PawTrack journey, from a busy owner worrying about a missed walk to planning,
+            tracking, reviewing, and managing dog data securely.
+        </p>
+        <div class="panel storyboard-wrap">
+            <img src="media/storyboard.png" alt="PawTrack storyboard" />
+        </div>
+    </div>
+</section>
+
+<section id="screens">
+    <div class="container">
+        <h2 class="section-title">App Screens</h2>
+        <div class="screens-grid">
+            <div class="screenshot">
+                <img src="media/login.jpg" alt="Login screen" />
+                <div class="caption">Login and registration screen for account-based access.</div>
+            </div>
+            <div class="screenshot">
+                <img src="media/home_page_1.jpg" alt="Home screen" />
+                <div class="caption">The home page keeps all dog cards together in one place.</div>
+            </div>
+            <div class="screenshot">
+                <img src="media/dog_page_2.jpg" alt="Dog detail screen" />
+                <div class="caption">Dog detail page with walk goal and weather support.</div>
+            </div>
+            <div class="screenshot">
+                <img src="media/walking_page_2.jpg" alt="Walking screen" />
+                <div class="caption">Live walk tracking with map, route, time, and distance.</div>
+            </div>
+            <div class="screenshot">
+                <img src="media/walk_finish_1.jpg" alt="Walk summary screen" />
+                <div class="caption">A clear summary appears after each completed walk.</div>
+            </div>
+            <div class="screenshot">
+                <img src="media/walk_history.jpg" alt="History screen" />
+                <div class="caption">History view helps users review previous dog walks.</div>
+            </div>
+            <div class="screenshot">
+                <img src="media/calendar_1.jpg" alt="Calendar screen" />
+                <div class="caption">Calendar records make daily routine easier to check.</div>
+            </div>
+            <div class="screenshot">
+                <img src="media/reminder_1.jpg" alt="Reminder screen" />
+                <div class="caption">Reminders support owners who may forget a walk on busy days.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="api">
+    <div class="container">
+        <h2 class="section-title">API & Service Integration</h2>
+        <div class="api-list">
+            <div class="panel">
+                <h3>Open-Meteo API</h3>
+                <p>Used to fetch live weather data and generate walking advice based on current conditions.</p>
+            </div>
+            <div class="panel">
+                <h3>Firebase Authentication</h3>
+                <p>Used for user registration, login, logout, and account-based access.</p>
+            </div>
+            <div class="panel">
+                <h3>Cloud Firestore</h3>
+                <p>Used to store dog profiles and walk records in the cloud with per-user data separation.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="get-started">
+    <div class="container">
+        <h2 class="section-title">Get Started</h2>
+        <div class="steps">
+            <div class="step-list">
+                <h3>Release Build</h3>
+                <ol>
+                    <li>Open the GitHub release page.</li>
+                    <li>Download the latest <strong>app-release.apk</strong>.</li>
+                    <li>Install it on an Android device.</li>
+                    <li>Create an account or log in to start using PawTrack.</li>
+                </ol>
+            </div>
+            <div class="step-list">
+                <h3>Run From Source</h3>
+                <ol>
+                    <li>Clone the repository.</li>
+                    <li>Run <code>flutter pub get</code>.</li>
+                    <li>Configure your own Firebase project.</li>
+                    <li>Enable Email/Password Authentication and Cloud Firestore.</li>
+                    <li>Run the app with <code>flutter run</code>.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="cta-box">
+            <div>
+                <h3>Try PawTrack</h3>
+                <p>
+                    Download the release build for quick testing, or open the GitHub repository to explore the project source,
+                    screenshots, and documentation.
+                </p>
+            </div>
+            <div class="actions">
+                <a class="btn btn-primary" href="https://github.com/ZiyiWang58/casa0015-mobile-assessment/releases/tag/v1.0" target="_blank" rel="noreferrer">Download APK</a>
+                <a class="btn btn-secondary" href="https://github.com/ZiyiWang58/casa0015-mobile-assessment" target="_blank" rel="noreferrer">Open Repository</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        PawTrack · CASA0015 Mobile Systems and Interactions · Built with Flutter, Firebase, GPS, and weather data.
+    </div>
+</footer>
+</body>
+</html>
