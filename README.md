@@ -27,6 +27,8 @@ It combines **real-time GPS tracking**, **weather advice**, **calendar reminders
 
 **Landing Page:** [Visit the project website](https://ziyiwang58.github.io/casa0015-mobile-assessment/)
 
+**Presentation Video:** [Watch here](https://youtu.be/BD-tIGsAYS4)
+
 ---
 
 ## Storyboard
